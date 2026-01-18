@@ -1,0 +1,11 @@
+#systemLogs {
+  background-color: #000;
+  color: #00ff00;
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  padding: 10px;
+  height: 250px;
+  overflow-y: auto;
+  border-radius: 4px;
+  border: 1px solid #0f0;
+}
