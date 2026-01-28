@@ -14,21 +14,16 @@ let showToast=(message, color) => {
   });
 }
 
-let checkUsername=async (username, cookie) => {
-  const formData=new FormData();
-  formData.append('username', username);
+let checkUsername=async (username) => {
   return new Promise((resolve, reject) => {
     $.ajax({
-      url: 'https://www.instagram.com/api/v1/web/accounts/web_create_ajax/attempt/',
+      url: 'https://globalapi.netlify.app/api/usernameChecker/instagram',
       type: 'POST',
-      beforeSend: (request) => {
-        request.setRequestHeader("X-CSRFToken", cookie);
-      },
-      processData: false,
-      contentType: false,
-      data: formData,
+      data: JSON.stringify({
+        "username": username
+      }),
       success: (res) => {
-        resolve(res);
+        resolve(res.success);
       },
       error: (err) => {
         reject(err);
@@ -37,8 +32,8 @@ let checkUsername=async (username, cookie) => {
   });
 }
 
-let getAllPossibleAlpha=(maxLength) => {
-  const possibleLetter='._0123456789abcdefghijklmnopqrstuvwxyz';
+let getAllPossibleAlpha=(minLetters,maxLetters) => {
+  // const possibleLetter='._0123456789abcdefghijklmnopqrstuvwxyz';
   // const result=[];
   // const dfs=(current) => {
   //   if (current.length>0) {
@@ -54,22 +49,51 @@ let getAllPossibleAlpha=(maxLength) => {
 
   // dfs('');
   // return result;
-  const result=[];
-  const base=possibleLetter.length;
 
-  for (let length=1; length<=maxLength; length++) {
-    const max=Math.pow(base, length);
+  // const result=[];
+  // const base=possibleLetter.length;
 
-    for (let i=0; i<max; i++) {
-      let n=i;
-      let str='';
+  // for (let length=1; length<=maxLength; length++) {
+  //   const max=Math.pow(base, length);
 
-      while (n>0) {
-        str=possibleLetter[n%base]+str;
-        n=Math.floor(n/base);
+  //   for (let i=0; i<max; i++) {
+  //     let n=i;
+  //     let str='';
+
+  //     while (n>0) {
+  //       str=possibleLetter[n%base]+str;
+  //       n=Math.floor(n/base);
+  //     }
+
+  //     str=str.padStart(length, possibleLetter[0]);
+  //     result.push(str);
+  //   }
+  // }
+
+  // return result;
+
+  if (minLetters < 1 || maxLetters < minLetters) {
+    throw new Error('Invalid minLetters / maxLetters');
+  }
+
+  const possibleLetter = '._0123456789abcdefghijklmnopqrstuvwxyz';
+  const base = possibleLetter.length;
+  const result = [];
+
+  for (let length = minLetters; length <= maxLetters; length++) {
+    const max = Math.pow(base, length);
+
+    for (let i = 0; i < max; i++) {
+      let n = i;
+      let str = '';
+
+      while (n > 0) {
+        str = possibleLetter[n % base] + str;
+        n = Math.floor(n / base);
       }
 
-      str=str.padStart(length, possibleLetter[0]);
+      // pad with first character to ensure fixed length
+      str = str.padStart(length, possibleLetter[0]);
       result.push(str);
     }
   }
@@ -77,32 +101,29 @@ let getAllPossibleAlpha=(maxLength) => {
   return result;
 }
 
-let checkUsernames=(options) =>
-  new Promise((resolve, reject) => {
-    if (options.signal.aborted) {
-      return reject(new DOMException("Aborted", "AbortError"));
+let checkUsernames=(options) => new Promise(async (resolve, reject) => {
+  if (options.signal.aborted) {
+    return reject(new DOMException("Aborted", "AbortError"));
+  }
+  if (options.generationType=='alpha') {
+
+    let allAlpha=getAllPossibleAlpha(3,options.maxLetters);
+    let tasks=[];
+    let results;
+    console.log(allAlpha);
+    for (let i=0; i<allAlpha.length; i++) {
+      tasks.push(checkUsername(allAlpha[i]));
+      if (tasks.length==options.numThreads) {
+        results=await Promise.all(tasks);
+        console.log(results);
+        tasks=[];
+      }
     }
-    if (options.generationType=='alpha') {
-      fetch('https://instagram.com', {
-        method: 'GET',
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0'
-        }
-      })
-        .then((res) => {
-          console.log(res);
-        });
-      // checkUsername('example')
-      // let allAlpha=getAllPossibleAlpha(options.maxLetters);
-      // let tasks=[];
-      // for (let i=0; i<allAlpha.length; i++) {
-      //   tasks.push();
-      // }
-    }
-    options.signal.addEventListener("abort", () => {
-      reject(new DOMException("Aborted", "AbortError"));
-    });
+  }
+  options.signal.addEventListener("abort", () => {
+    reject(new DOMException("Aborted", "AbortError"));
   });
+});
 
 
 // implementation
