@@ -296,8 +296,15 @@
                                                 </div>
                                             </div>
                                             <div class="col-lg-3">
-                                                <button type="button" class="btn btn-success w-100" id="actionButton" data-state="stop"><i
-                                                        class="fas fa-play"></i> Start</button>
+                                                <div class="form-group">
+                                                    <label>Cookie <span class="text-danger">*</span></label>
+                                                    <input type="text" class="form-control" name="cookie"
+                                                        required />
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-3">
+                                                <button type="button" class="btn btn-success w-100" id="actionButton"
+                                                    data-state="stop"><i class="fas fa-play"></i> Start</button>
                                             </div>
                                         </div>
                                     </form>
@@ -418,8 +425,7 @@
     </a>
 
     <div class="position-fixed bottom-0 right-0 p-3" style="z-index: 5; right: 0; bottom: 0;">
-        <div class="toast hide" role="alert" aria-live="assertive" aria-atomic="true"
-            data-delay="4000">
+        <div class="toast hide" role="alert" aria-live="assertive" aria-atomic="true" data-delay="4000">
             <div class="toast-header d-flex justify-content-between">
                 <div>
                     <small>Now</small>

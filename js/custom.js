@@ -14,6 +14,29 @@ let showToast=(message, color) => {
   });
 }
 
+let checkUsername=async (username, cookie) => {
+  const formData=new FormData();
+  formData.append('username', username);
+  return new Promise((resolve, reject) => {
+    $.ajax({
+      url: 'https://www.instagram.com/api/v1/web/accounts/web_create_ajax/attempt/',
+      type: 'POST',
+      beforeSend: (request) => {
+        request.setRequestHeader("X-CSRFToken", cookie);
+      },
+      processData: false,
+      contentType: false,
+      data: formData,
+      success: (res) => {
+        resolve(res);
+      },
+      error: (err) => {
+        reject(err);
+      }
+    });
+  });
+}
+
 let getAllPossibleAlpha=(maxLength) => {
   const possibleLetter='._0123456789abcdefghijklmnopqrstuvwxyz';
   // const result=[];
@@ -46,7 +69,6 @@ let getAllPossibleAlpha=(maxLength) => {
         n=Math.floor(n/base);
       }
 
-      // pad with first character
       str=str.padStart(length, possibleLetter[0]);
       result.push(str);
     }
@@ -54,14 +76,28 @@ let getAllPossibleAlpha=(maxLength) => {
 
   return result;
 }
+
 let checkUsernames=(options) =>
   new Promise((resolve, reject) => {
     if (options.signal.aborted) {
       return reject(new DOMException("Aborted", "AbortError"));
     }
     if (options.generationType=='alpha') {
-      let allAlpha=getAllPossibleAlpha(options.maxLetters);
-      console.log(allAlpha);
+      fetch('https://instagram.com', {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0'
+        }
+      })
+        .then((res) => {
+          console.log(res);
+        });
+      // checkUsername('example')
+      // let allAlpha=getAllPossibleAlpha(options.maxLetters);
+      // let tasks=[];
+      // for (let i=0; i<allAlpha.length; i++) {
+      //   tasks.push();
+      // }
     }
     options.signal.addEventListener("abort", () => {
       reject(new DOMException("Aborted", "AbortError"));
@@ -96,6 +132,7 @@ $(document).ready(() => {
     let maxLetters=$('input[name="maxLetters"]').val();
     let numThreads=$('input[name="numThreads"]').val();
     let generationType=$('select[name="generationType"]').val();
+    let cookie=$('input[name="cookie"]').val();
 
     if ($('#actionButton').data('state')=='stop') {
       $('#actionButton').data('state', 'start');
