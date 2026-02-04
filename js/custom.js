@@ -1,3 +1,6 @@
+// define
+let t=$('#accountData').DataTable();
+
 // all function
 let setCache=(key, value) => {
   localStorage.setItem(key, value);
@@ -14,86 +17,27 @@ let showToast=(message, color) => {
   });
 }
 
-let checkUsername=async (username) => {
-  return new Promise((resolve, reject) => {
-    $.ajax({
-      url: 'https://globalapi.netlify.app/api/usernameChecker/instagram',
-      type: 'POST',
-      data: JSON.stringify({
-        "username": username
-      }),
-      success: (res) => {
-        resolve(res.success);
-      },
-      error: (err) => {
-        reject(err);
-      }
-    });
-  });
-}
-
-let getAllPossibleAlpha=(minLetters,maxLetters) => {
-  // const possibleLetter='._0123456789abcdefghijklmnopqrstuvwxyz';
-  // const result=[];
-  // const dfs=(current) => {
-  //   if (current.length>0) {
-  //     result.push(current);
-  //   }
-
-  //   if (current.length===maxLength) return;
-
-  //   for (const c of possibleLetter) {
-  //     dfs(current+c);
-  //   }
-  // };
-
-  // dfs('');
-  // return result;
-
-  // const result=[];
-  // const base=possibleLetter.length;
-
-  // for (let length=1; length<=maxLength; length++) {
-  //   const max=Math.pow(base, length);
-
-  //   for (let i=0; i<max; i++) {
-  //     let n=i;
-  //     let str='';
-
-  //     while (n>0) {
-  //       str=possibleLetter[n%base]+str;
-  //       n=Math.floor(n/base);
-  //     }
-
-  //     str=str.padStart(length, possibleLetter[0]);
-  //     result.push(str);
-  //   }
-  // }
-
-  // return result;
-
-  if (minLetters < 1 || maxLetters < minLetters) {
+let getAllPossibleAlpha=(minLetters, maxLetters) => {
+  if (minLetters<1||maxLetters<minLetters) {
     throw new Error('Invalid minLetters / maxLetters');
   }
 
-  const possibleLetter = '._0123456789abcdefghijklmnopqrstuvwxyz';
-  const base = possibleLetter.length;
-  const result = [];
+  const possibleLetter='._0123456789abcdefghijklmnopqrstuvwxyz';
+  const base=possibleLetter.length;
+  const result=[];
 
-  for (let length = minLetters; length <= maxLetters; length++) {
-    const max = Math.pow(base, length);
+  for (let length=minLetters; length<=maxLetters; length++) {
+    const max=Math.pow(base, length);
 
-    for (let i = 0; i < max; i++) {
-      let n = i;
-      let str = '';
+    for (let i=0; i<max; i++) {
+      let n=i;
+      let str='';
 
-      while (n > 0) {
-        str = possibleLetter[n % base] + str;
-        n = Math.floor(n / base);
+      while (n>0) {
+        str=possibleLetter[n%base]+str;
+        n=Math.floor(n/base);
       }
-
-      // pad with first character to ensure fixed length
-      str = str.padStart(length, possibleLetter[0]);
+      str=str.padStart(length, possibleLetter[0]);
       result.push(str);
     }
   }
@@ -102,21 +46,47 @@ let getAllPossibleAlpha=(minLetters,maxLetters) => {
 }
 
 let checkUsernames=(options) => new Promise(async (resolve, reject) => {
-  if (options.signal.aborted) {
-    return reject(new DOMException("Aborted", "AbortError"));
-  }
   if (options.generationType=='alpha') {
 
-    let allAlpha=getAllPossibleAlpha(3,options.maxLetters);
+    let allAlpha=getAllPossibleAlpha(3, options.maxLetters);
     let tasks=[];
-    let results;
-    console.log(allAlpha);
     for (let i=0; i<allAlpha.length; i++) {
-      tasks.push(checkUsername(allAlpha[i]));
-      if (tasks.length==options.numThreads) {
-        results=await Promise.all(tasks);
-        console.log(results);
-        tasks=[];
+      // tasks.push(checkUsername(allAlpha[i]));
+      tasks.push(new Promise((resolve1, reject1) => {
+        $.ajax({
+          url: 'https://globalapi.netlify.app/api/usernameChecker/instagram',
+          type: 'POST',
+          data: JSON.stringify({
+            username: allAlpha[i]
+          }),
+          success: (res) => {
+            resolve1({
+              accountStatus: res.success,
+              httpStatus: res.status
+            });
+          },
+          error: (err) => {
+            reject1(err);
+          }
+        });
+      }));
+      if ((i+1)%options.numThreads==0) {
+        await Promise.all(tasks).then((val) => {
+          tasks=[];
+          console.log(val);
+          t.row.add([
+            i+1,
+            allAlpha[i],
+            val.success? 'Availabble':'Not Available',
+            val.httpStatus
+          ]);
+        });
+      }
+      if (options.signal.aborted) {
+        return reject(new DOMException("Aborted", "AbortError"));
+      }
+      if (getCache('process')=='stop') {
+        break;
       }
     }
   }
@@ -160,7 +130,7 @@ $(document).ready(() => {
       $('#actionButton').removeClass('btn-success').addClass('btn-danger');
       $('#actionButton').html('<i class="fas fa-stop"></i> Stop');
       showToast('Starting process...', 'primary');
-
+      setCache('process', 'continue');
       checkUsernames({
         signal: controller.signal,
         generationType: generationType,
@@ -175,10 +145,10 @@ $(document).ready(() => {
       $('#actionButton').html('<i class="fas fa-play"></i> Start');
       showToast('Stopping process...', 'danger');
       controller.abort();
+      setCache('process', 'stop');
     }
 
   });
-  $('#accountData').DataTable();
 
 
 });
