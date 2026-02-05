@@ -50,6 +50,7 @@ let checkUsernames=(options) => new Promise(async (resolve, reject) => {
 
     let allAlpha=getAllPossibleAlpha(3, options.maxLetters);
     let tasks=[];
+    let isAvailable;
     for (let i=0; i<allAlpha.length; i++) {
       // tasks.push(checkUsername(allAlpha[i]));
       tasks.push(new Promise((resolve1, reject1) => {
@@ -61,8 +62,10 @@ let checkUsernames=(options) => new Promise(async (resolve, reject) => {
           }),
           success: (res) => {
             resolve1({
-              accountStatus: res.success,
-              httpStatus: res.status
+              id: i+1,
+              username: allAlpha[i],
+              accountStatus: res.success?'Available':'Not Available',
+              httpStatus: res.status,
             });
           },
           error: (err) => {
@@ -73,13 +76,16 @@ let checkUsernames=(options) => new Promise(async (resolve, reject) => {
       if ((i+1)%options.numThreads==0) {
         await Promise.all(tasks).then((val) => {
           tasks=[];
-          console.log(val);
-          t.row.add([
-            i+1,
-            allAlpha[i],
-            val.success? 'Availabble':'Not Available',
-            val.httpStatus
-          ]);
+          for (let j=0; j<val.length; j++) {
+            console.log(val[j]);
+            t.row.add([
+              val[j].id,
+              val[j].username,
+              val[j].accountStatus,
+              val[j].httpStatus
+            ]).draw(false);
+          }
+
         });
       }
       if (options.signal.aborted) {
